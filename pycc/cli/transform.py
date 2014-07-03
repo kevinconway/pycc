@@ -1,10 +1,12 @@
 """CLI tool for creating samples of optimized source code."""
 
 import argparse
+import os
 
 from astkit.render import SourceCodeRenderer
 
 from . import common
+from .. import loader
 
 
 def parse_args():
@@ -14,23 +16,48 @@ def parse_args():
     return parser.parse_args()
 
 
+def main_module(path, optimizers):
+
+    mod = loader.ModuleLoader(path).load()
+
+    for optimizer in optimizers:
+        optimizer(mod, package=None)
+
+    print SourceCodeRenderer.render(mod.node)
+
+
+def main_package(path, optimizers):
+
+    pkg = loader.PackageLoader(path).load()
+
+    for mod in pkg.modules():
+        for optimizer in optimizers:
+            optimizer(mod, package=pkg)
+
+        print SourceCodeRenderer.render(mod.node)
+
+
 def main():
 
     args = parse_args()
 
-    collection = common.load_from_path(args.source)
+    optimizers = common.optimizers_from_args(args)
 
-    for item in collection:
+    path = os.path.realpath(
+        os.path.expanduser(
+            os.path.expandvars(
+                args.source
+            )
+        )
+    )
 
-        for bundle in common.bundles_from_args(args):
+    if os.path.isdir(path):
 
-            found = bundle[0](root=item.node).visit(item.node)
+        main_package(path, optimizers)
 
-            for transformer in bundle[1:]:
+    else:
 
-                tree = transformer(found).visit(item.node)
-
-        print SourceCodeRenderer.render(tree)
+        main_module(path, optimizers)
 
 
 if __name__ == '__main__':

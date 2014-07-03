@@ -6,11 +6,9 @@ import marshal
 import os
 import py_compile
 import time
-import tempfile
-
-from astkit.render import SourceCodeRenderer
 
 from . import common
+from .. import loader
 
 
 def parse_args():
@@ -19,14 +17,22 @@ def parse_args():
     parser = common.add_common_args(parser)
     parser.add_argument(
         '--destination',
-        default='build',
+        required=False,
         help='Path to place compiled binaries in.',
     )
     return parser.parse_args()
 
-def pyc_direct(tree, ast_file, destination):
 
-    codeobject = compile(tree, ast_file.file_path, 'exec')
+def make_pyc(module, destination):
+
+    ast.fix_missing_locations(module.node)
+    codeobject = compile(module.node, module.location, 'exec')
+
+    destination_dir = os.path.split(destination)[0]
+
+    if not os.path.exists(destination_dir):
+
+        os.makedirs(destination_dir)
 
     with open(destination, 'wb') as pyc:
         pyc.write('\0\0\0\0')
@@ -37,46 +43,90 @@ def pyc_direct(tree, ast_file, destination):
         pyc.write(py_compile.MAGIC)
 
 
-def pyc_tmp_compile(tree, ast_file, destination):
+def main_module(path, optimizers, destination):
 
-    source = SourceCodeRenderer.render(tree)
+    mod = loader.ModuleLoader(path).load()
 
-    with tempfile.NamedTemporaryFile() as tmp:
+    for optimizer in optimizers:
 
-        tmp.write(source)
-        tmp.flush()
+        optimizer(mod, package=None)
 
-        py_compile.compile(tmp.name, destination)
+    make_pyc(
+        mod,
+        os.path.join(
+            destination,
+            os.path.split(mod.location)[1] + 'c',
+        ),
+    )
 
 
+def main_package(path, optimizers, destination):
+
+    pkg = loader.PackageLoader(path).load()
+
+    # Remove the trailing directory name if the compile directory is the same
+    # as the source. This part of the name is provided by the python path when
+    # joining the output_path to the destination.
+    if pkg.location == destination:
+
+        destination = os.path.split(destination)[0]
+
+    for mod in pkg.modules():
+
+        for optimizer in optimizers:
+
+            optimizer(mod, package=pkg)
+
+        output_path = mod.path + ".pyc"
+
+        if mod.location.endswith('__init__.py'):
+
+            output_path = os.path.join(mod.path, '__init__.pyc')
+
+        if output_path.startswith(os.sep):
+
+            output_path = output_path[1:]
+
+        make_pyc(mod, os.path.join(destination, output_path))
 
 
 def main():
 
     args = parse_args()
 
-    collection = common.load_from_path(args.source)
+    optimizers = common.optimizers_from_args(args)
 
-    if not os.path.isdir(args.destination):
-
-        os.makedirs(args.destination)
-
-    for item in collection:
-
-        for bundle in common.bundles_from_args(args):
-
-            found = bundle[0](root=item.node).visit(item.node)
-
-            for transformer in bundle[1:]:
-
-                tree = transformer(found).visit(item.node)
-
-        ast.fix_missing_locations(tree)
-        output_path = os.path.join(
-            args.destination,
-            item.python_path or os.path.split(item.file_path)[1] + "c",
+    path = os.path.realpath(
+        os.path.expanduser(
+            os.path.expandvars(
+                args.source
+            )
         )
-        pyc_tmp_compile(tree, item, output_path)
+    )
+
+    destination = os.path.realpath(
+        os.path.expanduser(
+            os.path.expandvars(
+                args.destination
+            )
+        )
+    ) if args.destination is not None else path
+
+    if os.path.isfile(destination):
+
+        destination = os.path.split(destination)[0]
+
+    if not os.path.exists(destination):
+
+        os.makedirs(destination)
+
+    if os.path.isdir(path):
+
+        main_package(path, optimizers, destination)
+
+    else:
+
+        main_module(path, optimizers, destination)
 
 
 if __name__ == '__main__':

@@ -1,12 +1,6 @@
 """Common utilities for CLI modules"""
 
-import os
-
-from ..asttools import load
-from ..visitors import constants
-from ..visitors import forlist
-from ..visitors import rangelen
-from ..visitors import reversedrange
+from pkg_resources import iter_entry_points
 
 
 def add_common_args(parser):
@@ -17,73 +11,34 @@ def add_common_args(parser):
         help='Path to the python source code. May be file or directory.',
     )
 
-    parser.add_argument(
-        '--constants',
-        help="Replace constant expresions with inline literals.",
-        action='store_true',
-        default=False,
-    )
+    for registration in iter_entry_points('pycc.cli.args'):
 
-    parser.add_argument(
-        '--forlist',
-        help="Replace loops over inline lists with xrange.",
-        action='store_true',
-        default=False,
-    )
-
-    parser.add_argument(
-        '--rangelen',
-        help="Replace range(len()) index loops with iter loops..",
-        action='store_true',
-        default=False,
-    )
-
-    parser.add_argument(
-        '--reversedrange',
-        help="Replace range(len()-1, -1, -1) index loops with revesed()..",
-        action='store_true',
-        default=False,
-    )
+        registration.load()(parser)
 
     return parser
 
 
-def bundles_from_args(args):
-    """Return a list of tuples containing check/transform bundles.
+def optimizers_from_args(args):
+    """Return an iterable of optimizer functions."""
 
-    The first element of a bundle is the checker. All other elements are
-    transformers.
-    """
+    optimizers = []
 
-    bundles = []
+    argd = args.__dict__
+    for arg in argd:
 
-    if args.constants:
+        if hasattr(argd[arg], 'startswith') and argd[arg].startswith('pycc_'):
 
-        bundles.append((constants.ConstantFinder, constants.ConstantInliner))
+            for optimizer in iter_entry_points('pycc.optimizers', argd[arg]):
 
-    if args.forlist:
+                optimizers.append(optimizer.load())
+                break
 
-        bundles.append((forlist.ForListFinder, forlist.XRangeReplacer))
+            else:
 
-    if args.rangelen:
+                raise ImportError(
+                    "Could not load optimizer plugin named {0}.".format(
+                        argd[arg],
+                    )
+                )
 
-        bundles.append((rangelen.RangeLenFinder, rangelen.IterLoopReplacer))
-
-    if args.reversedrange:
-
-        bundles.append((
-            reversedrange.ReversedRangeFinder,
-            reversedrange.ReversedIterReplacer,
-        ))
-
-    return bundles
-
-
-def load_from_path(path):
-    """Return an iterable of AstFile objects using the asttools loaders."""
-
-    if os.path.isdir(path):
-
-        return load.load_directory(path)
-
-    return [load.load_file(path)]
+    return optimizers
