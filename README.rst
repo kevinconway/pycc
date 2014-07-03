@@ -2,46 +2,71 @@
 PyCC
 ====
 
-**Python code optimizer.**
+.. image:: https://travis-ci.org/kevinconway/pycc.svg?branch=master
+    :target: https://travis-ci.org/kevinconway/pycc
 
-Running The Samples
-===================
+PyCC is a Python code optimizer. It rewrites your code to make it faster.
 
-.. code-block::
+`Developer and usage documentation <http://pycc.readthedocs.org/en/latest/>`.
 
-    pycc-transform samples/constants.py --constants
 
-    pycc-compile samples/reversed_range.py --reversedrange
+Basic Example
+=============
 
-Usage
-=====
+Symbol table (variable) lookups don't seem expensive at first.
 
--   pycc-transform
+.. code-block:: python
 
-    Print a modified source code to the terminal.
+    # awesome_module.py
 
--   pycc-compile
+    MAGIC_NUMBER = 7
 
-    Create a compiled binary instead of printing.
+    for x in xrange(10000000):
 
-Options
--------
+        MAGIC_NUMBER * MAGIC_NUMBER
 
--   --constants
+Now let's make a crude benchmark.
 
-    Render all constants as inline values.
+.. code-block:: bash
 
--   --forlist
+    # Generate bytecode file to skip compilation at runtime.
+    python -m compileall awesome_module.py
+    # Now get a simple timer.
+    time python awesome_module.pyc
 
-    Replace inline, sequential lists with xrange where possible.
+    # real    0m0.923s
+    # user    0m0.920s
+    # sys     0m0.004s
 
--   --rangelen
+What does PyCC have to say about it?
 
-    Convert `range(len())` loops into loops using `__iter__`.
+.. code-block:: bash
 
--   --reversedrange
+    pycc-transform awesome_module.py --constants
 
-    Convert `range(len()-1, -1 ,-1)` into loops using `reversed()`.
+.. code-block:: python
+
+    MAGIC_NUMBER = 7
+    for x in xrange(10000000):
+        (7 * 7)
+
+Neat, but what good does that do?
+
+.. code-block:: bash
+
+    pycc-compile awesome_module.py -- constants
+    time python awesome_module.pyc
+
+    # real    0m0.473s
+    # user    0m0.469s
+    # sys     0m0.004s
+
+How To Get It
+=============
+
+.. code-block:: bash
+
+    pip install pycc
 
 License
 =======
