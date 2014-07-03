@@ -9,10 +9,10 @@ with open('LICENSE') as f:
 
 setup(
     name='pycc',
-    version='0.0.1',
+    version='1.0.0',
     url='https://github.com/kevinconway/pycc',
     license=license,
-    description='Python code optimizer..',
+    description='Python code optimizer.',
     author='Kevin Conway',
     author_email='kevinjacobconway@gmail.com',
     long_description=readme,
@@ -23,6 +23,12 @@ setup(
         'console_scripts': [
             'pycc-transform = pycc.cli.transform:main',
             'pycc-compile = pycc.cli.compile:main',
+        ],
+        'pycc.optimizers': [
+            'pycc_constant_inliner = pycc.optimizers.constant:optimize',
+        ],
+        'pycc.cli.args': [
+            'pycc_args_constant = pycc.cli.args:register_constants',
         ],
     },
 )

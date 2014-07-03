@@ -1,6 +1,6 @@
 """Common utilities for CLI modules"""
 
-from ..optimizers import constant
+from pkg_resources import iter_entry_points
 
 
 def add_common_args(parser):
@@ -11,12 +11,9 @@ def add_common_args(parser):
         help='Path to the python source code. May be file or directory.',
     )
 
-    parser.add_argument(
-        '--constants',
-        help="Replace constant expresions with inline literals.",
-        action='store_true',
-        default=False,
-    )
+    for registration in iter_entry_points('pycc.cli.args'):
+
+        registration.load()(parser)
 
     return parser
 
@@ -26,8 +23,22 @@ def optimizers_from_args(args):
 
     optimizers = []
 
-    if args.constants:
+    argd = args.__dict__
+    for arg in argd:
 
-        optimizers.append(constant.optimize)
+        if hasattr(argd[arg], 'startswith') and argd[arg].startswith('pycc_'):
+
+            for optimizer in iter_entry_points('pycc.optimizers', argd[arg]):
+
+                optimizers.append(optimizer.load())
+                break
+
+            else:
+
+                raise ImportError(
+                    "Could not load optimizer plugin named {0}.".format(
+                        argd[arg],
+                    )
+                )
 
     return optimizers
