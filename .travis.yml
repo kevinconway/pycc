@@ -1,0 +1,12 @@
+language: python
+python:
+    - "2.6"
+    - "2.7"
+install:
+    - pip install -U pep8 --use-mirrors
+    - pip install -U pyflakes --use-mirrors
+    - pip install ./
+script:
+    - pep8 pycc/
+    - pyflakes pycc/
+    - py.test tests/
