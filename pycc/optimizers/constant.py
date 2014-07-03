@@ -12,27 +12,71 @@ class ConstantCheck(base.Check, ast.NodeVisitor):
 
         super(ConstantCheck, self).__init__(module, package)
         self._count = 0
+        self._complex = False
         self._name = None
 
     def __call__(self, name):
 
         self._count = 0
+        self._complex = False
         self._name = name
         self.visit(self.module.node)
-        return self._count < 2
+        return self._count < 2 and not self._complex
 
     def visit_Assign(self, node):
 
-        for target in node.targets:
+        value = None
 
-            if (isinstance(target, ast.Name) and
-                    target.id == self._name and
-                    isinstance(target.ctx, ast.Store)):
+        # Simple "x = y" assignment type.
+        if (isinstance(node.targets[0], ast.Name) and
+                node.targets[0].id == self._name and
+                isinstance(node.targets[0].ctx, ast.Store)):
 
                 self._count += 1
+                value = node.value
+
+        # Complex "x, y = a, b" assignment type.
+        if (isinstance(node.targets[0], ast.Tuple) and
+                isinstance(node.value, ast.Tuple)):
+
+            idx = 0
+            for elt in node.targets[0].elts:
+
+                if (isinstance(elt, ast.Name) and
+                        elt.id == self._name and
+                        isinstance(elt.ctx, ast.Store)):
+
+                    self._count += 1
+                    value = node.value.elts[idx]
+                    break
+
+                idx += 1
+
+        # Inlining lists, generator expressions, etc., is usually harmful. Take
+        # the example of:
+        #
+        #       x = [1,2,3]
+        #       for y in len(x):
+        #           print x[y]
+        #
+        # This would be inlined as:
+        #
+        #       x = [1,2,3]
+        #       for y in len([1,2,3]):
+        #           print [1,2,3][y]
+        #
+        # While this is technically correct and valid code, it would not
+        # produce the expected "optimized" code for large length arrays.
+        if (value is not None and
+            (not isinstance(value, ast.Num) or
+                isinstance(value, ast.Str) or
+                isinstance(value, ast.Name))):
+
+            self._complex = True
 
 
 class ConstantFinder(base.Finder, ast.NodeVisitor):
+    """Find where constants are first assigned."""
 
     def __init__(self, module, package=None):
 
@@ -48,23 +92,50 @@ class ConstantFinder(base.Finder, ast.NodeVisitor):
 
     def visit_Assign(self, node):
 
-        for target in node.targets:
+        # Assignments always have one target. Either Name or Tuple type.
+        target = node.targets[0]
+        value = node.value
 
-            check = ConstantCheck(
-                self.module,
-                self.package,
-            )
-            if (isinstance(target, ast.Name) and
-                    isinstance(target.ctx, ast.Store) and
-                    check(target.id) is True):
+        # Sanity check to ensure this is a STORE call.
+        if isinstance(target.ctx, ast.Store):
 
-                self._found.append(
-                    base.FinderResult(
-                        node=node,
-                        module=self.module,
-                        package=self.package,
+            # Simple "x = y" statement
+            if isinstance(target, ast.Name):
+
+                if ConstantCheck(self.module, self.package)(target.id):
+
+                    self._found.append(
+                        base.FinderResult(
+                            node=node,
+                            module=self.module,
+                            package=self.package,
+                        )
                     )
-                )
+
+            # Complex "a, b = x, y" statement
+            if isinstance(target, ast.Tuple):
+
+                for idx, elt in enumerate(target.elts):
+
+                    if isinstance(elt, ast.Name):
+
+                        if ConstantCheck(self.module, self.package)(elt.id):
+
+                            dupe = ast.copy_location(
+                                ast.Assign(
+                                    targets=[target.elts[idx]],
+                                    value=value.elts[idx],
+                                ),
+                                node,
+                            )
+
+                            self._found.append(
+                                base.FinderResult(
+                                    node=dupe,
+                                    module=self.module,
+                                    package=self.package,
+                                )
+                            )
 
 
 class ConstantInliner(base.Transformer, ast.NodeTransformer):
