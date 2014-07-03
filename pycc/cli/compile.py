@@ -92,11 +92,11 @@ def main():
 
     if os.path.isdir(path):
 
-        main_package(path, optimizers, args.destination)
+        main_package(path, optimizers, destination)
 
     else:
 
-        main_module(path, optimizers, args.destination)
+        main_module(path, optimizers, destination)
 
 
 if __name__ == '__main__':
