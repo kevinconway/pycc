@@ -70,8 +70,8 @@ class ConstantCheck(base.Check, ast.NodeVisitor):
         # produce the expected "optimized" code for large length arrays.
         if (value is not None and
             not (isinstance(value, ast.Num) or
-                isinstance(value, ast.Str) or
-                isinstance(value, ast.Name))):
+                 isinstance(value, ast.Str) or
+                 isinstance(value, ast.Name))):
 
             self._complex = True
 
