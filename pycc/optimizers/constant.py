@@ -26,21 +26,22 @@ class ConstantCheck(base.Check, ast.NodeVisitor):
     def visit_Assign(self, node):
 
         value = None
+        target = node.targets[0] if hasattr(node, 'targets') else node.target
 
         # Simple "x = y" assignment type.
-        if (isinstance(node.targets[0], ast.Name) and
-                node.targets[0].id == self._name and
-                isinstance(node.targets[0].ctx, ast.Store)):
+        if (isinstance(target, ast.Name) and
+                target.id == self._name and
+                isinstance(target.ctx, ast.Store)):
 
                 self._count += 1
                 value = node.value
 
         # Complex "x, y = a, b" assignment type.
-        if (isinstance(node.targets[0], ast.Tuple) and
+        if (isinstance(target, ast.Tuple) and
                 isinstance(node.value, ast.Tuple)):
 
             idx = 0
-            for elt in node.targets[0].elts:
+            for elt in target.elts:
 
                 if (isinstance(elt, ast.Name) and
                         elt.id == self._name and
@@ -68,11 +69,13 @@ class ConstantCheck(base.Check, ast.NodeVisitor):
         # While this is technically correct and valid code, it would not
         # produce the expected "optimized" code for large length arrays.
         if (value is not None and
-            (not isinstance(value, ast.Num) or
+            not (isinstance(value, ast.Num) or
                 isinstance(value, ast.Str) or
                 isinstance(value, ast.Name))):
 
             self._complex = True
+
+    visit_AugAssign = visit_Assign
 
 
 class ConstantFinder(base.Finder, ast.NodeVisitor):
