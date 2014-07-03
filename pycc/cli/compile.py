@@ -11,6 +11,7 @@ import tempfile
 from astkit.render import SourceCodeRenderer
 
 from . import common
+from .. import loader
 
 
 def parse_args():
@@ -19,14 +20,16 @@ def parse_args():
     parser = common.add_common_args(parser)
     parser.add_argument(
         '--destination',
-        default='build',
+        required=False,
         help='Path to place compiled binaries in.',
     )
     return parser.parse_args()
 
-def pyc_direct(tree, ast_file, destination):
 
-    codeobject = compile(tree, ast_file.file_path, 'exec')
+def make_pyc(module, destination):
+
+    ast.fix_missing_locations(module.node)
+    codeobject = compile(module.node, module.location, 'exec')
 
     with open(destination, 'wb') as pyc:
         pyc.write('\0\0\0\0')
@@ -37,46 +40,63 @@ def pyc_direct(tree, ast_file, destination):
         pyc.write(py_compile.MAGIC)
 
 
-def pyc_tmp_compile(tree, ast_file, destination):
+def main_module(path, optimizers, destination=None):
 
-    source = SourceCodeRenderer.render(tree)
+    mod = loader.ModuleLoader(path).load()
 
-    with tempfile.NamedTemporaryFile() as tmp:
+    for optimizer in optimizers:
+        optimizer(mod, package=None)
 
-        tmp.write(source)
-        tmp.flush()
+    make_pyc(
+        mod,
+        os.path.join(
+            destination,
+            os.path.split(mod.location)[1] + 'c',
+        ),
+    )
 
-        py_compile.compile(tmp.name, destination)
 
+def main_package(path, optimizers, destination=None):
 
+    pkg = loader.PackageLoader(path).load()
+
+    for mod in pkg.modules():
+        for optimizer in optimizers:
+            optimizer(mod, package=pkg)
+
+        make_pyc(mod, os.path.join(destination, mod.path))
 
 
 def main():
 
     args = parse_args()
 
-    collection = common.load_from_path(args.source)
+    optimizers = common.optimizers_from_args(args)
 
-    if not os.path.isdir(args.destination):
-
-        os.makedirs(args.destination)
-
-    for item in collection:
-
-        for bundle in common.bundles_from_args(args):
-
-            found = bundle[0](root=item.node).visit(item.node)
-
-            for transformer in bundle[1:]:
-
-                tree = transformer(found).visit(item.node)
-
-        ast.fix_missing_locations(tree)
-        output_path = os.path.join(
-            args.destination,
-            item.python_path or os.path.split(item.file_path)[1] + "c",
+    path = os.path.realpath(
+        os.path.expanduser(
+            os.path.expandvars(
+                args.source
+            )
         )
-        pyc_tmp_compile(tree, item, output_path)
+    )
+
+    destination = args.destination or path
+    if os.path.isfile(destination):
+
+        destination = os.path.split(destination)[0]
+
+    if not os.path.exists(destination):
+
+        os.makedirs(destination)
+
+    if os.path.isdir(path):
+
+        main_package(path, optimizers, args.destination)
+
+    else:
+
+        main_module(path, optimizers, args.destination)
 
 
 if __name__ == '__main__':
