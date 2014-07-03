@@ -21,7 +21,6 @@ setup(
     requires=['astkit', 'pytest'],
     entry_points={
         'console_scripts': [
-            'pycc-lint = pycc.cli.lint:main',
             'pycc-transform = pycc.cli.transform:main',
             'pycc-compile = pycc.cli.compile:main',
         ],
