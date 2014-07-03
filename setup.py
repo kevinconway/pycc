@@ -18,8 +18,8 @@ setup(
     long_description=readme,
     classifiers=[],
     packages=find_packages(exclude=['tests', 'build', 'dist', 'docs']),
-    requires=['astkit'],
-    entry_points = {
+    requires=['astkit', 'pytest'],
+    entry_points={
         'console_scripts': [
             'pycc-lint = pycc.cli.lint:main',
             'pycc-transform = pycc.cli.transform:main',
