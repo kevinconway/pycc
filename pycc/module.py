@@ -57,8 +57,6 @@ class Package(object):
     def get(self, path):
         """Get the closest Module to an import path."""
 
-        original_path = path
-
         if '.' in path:
 
             path = path.replace('.', os.sep)
@@ -75,9 +73,7 @@ class Package(object):
 
         if path not in self._paths:
 
-            print(original_path)
-            print(path)
-            raise ValueError("Module path not found in package.")
+            return None
 
         return ImportResult(module=self._paths[path], target=target)
 
