@@ -21,7 +21,7 @@ class ConstantCheck(base.Check, ast.NodeVisitor):
         self._complex = False
         self._name = name
         self.visit(self.module.node)
-        return self._count < 2 and not self._complex
+        return self._count == 1 and not self._complex
 
     def visit_Assign(self, node):
 
