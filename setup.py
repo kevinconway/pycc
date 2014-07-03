@@ -28,7 +28,7 @@ setup(
             'pycc_constant_inliner = pycc.optimizers.constant:optimize',
         ],
         'pycc.cli.args': [
-            'pycc_args_constant = pycc.cli.args:register_constants',
+            'pycc_core_args = pycc.cli.args:register',
         ],
     },
 )
