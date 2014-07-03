@@ -6,9 +6,6 @@ import marshal
 import os
 import py_compile
 import time
-import tempfile
-
-from astkit.render import SourceCodeRenderer
 
 from . import common
 from .. import loader
