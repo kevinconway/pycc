@@ -3,13 +3,14 @@ import ast
 import pytest
 
 from pycc import module
+from pycc.asttools import parse
 from pycc.optimizers import constant
 
 
 @pytest.fixture
 def node():
 
-    return ast.parse(
+    return parse.parse(
         """ONE = 1
 TWO = 2
 THREE = 3

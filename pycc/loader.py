@@ -3,6 +3,7 @@
 import ast
 import os
 
+from .asttools import parse
 from .asttools import references
 from .module import Module
 from .module import Package
@@ -30,9 +31,7 @@ class ModuleLoader(object):
 
             code = f.read()
 
-        node = ast.parse(code, filename=self.path, mode='exec')
-        references.add_parent_references(node)
-        references.add_sibling_references(node)
+        node = parse.parse(code, filename=self.path, mode='exec')
 
         return Module(
             location=self.path,
