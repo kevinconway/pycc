@@ -159,52 +159,48 @@ class ConstantFinder(base.Finder, ast.NodeVisitor):
         self.visit(self.module.node)
         return self._found[:]
 
+    # TODO(kevinconway): Add visit_Import(From).
     def visit_Assign(self, node):
 
         # Assignments always have one target. Either Name or Tuple type.
         target = node.targets[0]
         value = node.value
 
-        # Sanity check to ensure this is a STORE call.
-        if isinstance(target.ctx, ast.Store):
+        # Simple "x = y" statement
+        if isinstance(target, ast.Name):
 
-            # Simple "x = y" statement
-            if isinstance(target, ast.Name):
+            if ConstantCheck(self.module)(target):
 
-                if ConstantCheck(self.module, self.package)(target.id):
-
-                    self._found.append(
-                        base.FinderResult(
-                            node=node,
-                            module=self.module,
-                            package=self.package,
-                        )
+                self._found.append(
+                    base.FinderResult(
+                        node=node,
+                        module=self.module,
                     )
+                )
 
-            # Complex "a, b = x, y" statement
-            if isinstance(target, ast.Tuple):
+        # Complex "a, b = x, y" statement
+        if isinstance(target, ast.Tuple):
 
-                for idx, elt in enumerate(target.elts):
+            for idx, elt in enumerate(target.elts):
 
-                    if isinstance(elt, ast.Name):
+                if isinstance(elt, ast.Name):
 
-                        if ConstantCheck(self.module, self.package)(elt.id):
+                    if ConstantCheck(self.module)(elt):
 
-                            dupe = ast.copy_location(
-                                ast.Assign(
-                                    targets=[target.elts[idx]],
-                                    value=value.elts[idx],
-                                ),
-                                node,
+                        dupe = references.copy_location(
+                            ast.Assign(
+                                targets=[target.elts[idx]],
+                                value=value.elts[idx],
+                            ),
+                            node,
+                        )
+
+                        self._found.append(
+                            base.FinderResult(
+                                node=dupe,
+                                module=self.module,
                             )
-
-                            self._found.append(
-                                base.FinderResult(
-                                    node=dupe,
-                                    module=self.module,
-                                    package=self.package,
-                                )
-                            )
+                        )
 
 
 class ConstantInliner(base.Transformer, ast.NodeTransformer):
@@ -213,14 +209,25 @@ class ConstantInliner(base.Transformer, ast.NodeTransformer):
     def __call__(self, found):
 
         self._constant = found.node
+        self._value = self._resolve_constant_value(found.node, found.module)
         self.visit(found.module.node)
+
+    # TODO(kevinconway): Traverse import paths for values.
+    def _resolve_constant_value(self, node, module):
+
+        return node.value
 
     def visit_Name(self, node):
 
-        if (isinstance(node.ctx, ast.Load) and
-                node.id in (t.id for t in self._constant.targets)):
+        if (
+            isinstance(node.ctx, ast.Load) and
+            node.id in (t.id for t in self._constant.targets)
+        ):
 
-            return ast.copy_location(self._constant.value, self._constant)
+            return references.copy_location(
+                self._value,
+                self._constant,
+            )
 
         return self.generic_visit(node)
 

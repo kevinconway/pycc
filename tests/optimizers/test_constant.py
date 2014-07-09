@@ -10,8 +10,8 @@ from pycc.optimizers import constant
 @pytest.fixture
 def node():
 
-    return parse.parse(
-        """ONE = 1
+    src = """
+ONE = 1
 TWO = 2
 THREE = 3
 FOUR = THREE + ONE
@@ -32,35 +32,38 @@ print FOUR
 print FIVE
 print SIX
 print SEVEN
-print EIGHT, NINE"""
-    )
+print EIGHT, NINE
+    """
+
+    return parse.parse(src)
 
 
 @pytest.fixture
 def mod(node):
 
-    return module.Module(location='/', path=None, node=node)
+    return module.Package('/').add('/', node)
 
 
 def test_constant_check_identifies_constants(mod):
 
-    assert constant.ConstantCheck(mod)('ONE') is True
-    assert constant.ConstantCheck(mod)('TWO') is True
-    assert constant.ConstantCheck(mod)('THREE') is True
-    assert constant.ConstantCheck(mod)('SEVEN') is True
-    assert constant.ConstantCheck(mod)('EIGHT') is True
-    assert constant.ConstantCheck(mod)('NINE') is True
+    body = mod.node.body
+    assert constant.ConstantCheck(mod)(body[0].targets[0]) is True
+    assert constant.ConstantCheck(mod)(body[1].targets[0]) is True
+    assert constant.ConstantCheck(mod)(body[2].targets[0]) is True
+    assert constant.ConstantCheck(mod)(body[7].targets[0]) is True
+    assert constant.ConstantCheck(mod)(body[8].targets[0].elts[0]) is True
+    assert constant.ConstantCheck(mod)(body[8].targets[0].elts[1]) is True
 
 
 def test_constant_check_discards_multiple_assignements(mod):
 
-    assert constant.ConstantCheck(mod)('FIVE') is False
+    assert constant.ConstantCheck(mod)(mod.node.body[4].targets[0]) is False
 
 
 def test_constant_check_discards_complex_types(mod):
 
-    assert constant.ConstantCheck(mod)('FOUR') is False
-    assert constant.ConstantCheck(mod)('SIX') is False
+    assert constant.ConstantCheck(mod)(mod.node.body[3].targets[0]) is False
+    assert constant.ConstantCheck(mod)(mod.node.body[6].targets[0]) is False
 
 
 def test_constant_finder_matches_check(mod):
