@@ -78,6 +78,7 @@ class Package(object):
 
             return None
 
+        # TODO(kevinconway): Make target a scope.Name
         return ImportResult(module=self._paths[path], target=target)
 
     def __repr__(self):
