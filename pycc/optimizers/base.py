@@ -3,15 +3,15 @@
 from collections import namedtuple
 
 
-FinderResult = namedtuple('FinderResult', ('node', 'module', 'package'))
+FinderResult = namedtuple('FinderResult', ('node', 'module'))
 
 
 class Base(object):
 
-    def __init__(self, module, package=None):
+    def __init__(self, module):
 
         self.module = module
-        self.package = package
+        self.package = self.module.package
 
 
 class Finder(Base):

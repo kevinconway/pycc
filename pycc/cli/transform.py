@@ -21,7 +21,7 @@ def main_module(path, optimizers):
     mod = loader.ModuleLoader(path).load()
 
     for optimizer in optimizers:
-        optimizer(mod, package=None)
+        optimizer(mod)
 
     print SourceCodeRenderer.render(mod.node)
 

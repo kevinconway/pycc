@@ -33,11 +33,7 @@ class ModuleLoader(object):
 
         node = parse.parse(code, filename=self.path, mode='exec')
 
-        return Module(
-            location=self.path,
-            path=None,
-            node=node,
-        )
+        return Package(self.path).add(self.path, node)
 
     def __repr__(self):
 
