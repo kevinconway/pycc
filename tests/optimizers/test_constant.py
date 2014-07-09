@@ -33,6 +33,10 @@ print FIVE
 print SIX
 print SEVEN
 print EIGHT, NINE
+
+def TEN():
+
+    print EIGHT
     """
 
     return parse.parse(src)
@@ -81,19 +85,22 @@ def test_contants_are_inlined(mod):
 
     code = list(ast.iter_child_nodes(mod.node))
 
+    assert isinstance(code[-9].values[0], ast.Num)
+    assert code[-9].values[0].n == 1
+
     assert isinstance(code[-8].values[0], ast.Num)
-    assert code[-8].values[0].n == 1
+    assert code[-8].values[0].n == 2
 
     assert isinstance(code[-7].values[0], ast.Num)
-    assert code[-7].values[0].n == 2
+    assert code[-7].values[0].n == 3
 
-    assert isinstance(code[-6].values[0], ast.Num)
-    assert code[-6].values[0].n == 3
+    assert isinstance(code[-3].values[0], ast.Num)
+    assert code[-3].values[0].n == 3
 
-    assert isinstance(code[-2].values[0], ast.Num)
-    assert code[-2].values[0].n == 3
+    assert isinstance(code[-2].values[0], ast.Name)
+    assert isinstance(code[-2].values[1], ast.Name)
+    assert code[-2].values[0].id == 'True'
+    assert code[-2].values[1].id == 'False'
 
-    assert isinstance(code[-1].values[0], ast.Name)
-    assert isinstance(code[-1].values[1], ast.Name)
-    assert code[-1].values[0].id == 'True'
-    assert code[-1].values[1].id == 'False'
+    assert isinstance(code[-1].body[0].values[0], ast.Name)
+    assert code[-1].body[0].values[0].id == 'True'
