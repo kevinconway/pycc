@@ -44,10 +44,13 @@ class Package(object):
             location=location,
             path=path,
             node=node,
+            package=self,
         )
 
         self._locations[location] = mod
         self._paths[path] = mod
+
+        return mod
 
     def modules(self):
         """Get a generator of Module objects in the package."""
@@ -75,6 +78,7 @@ class Package(object):
 
             return None
 
+        # TODO(kevinconway): Make target a scope.Name
         return ImportResult(module=self._paths[path], target=target)
 
     def __repr__(self):
@@ -92,13 +96,15 @@ class Module(object):
         'path',
         'location',
         'node',
+        'package',
     )
 
-    def __init__(self, location, path, node):
+    def __init__(self, location, path, node, package):
 
         self.location = location
         self.path = path
         self.node = node
+        self.package = package
 
     def __repr__(self):
 

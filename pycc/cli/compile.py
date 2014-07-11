@@ -49,7 +49,7 @@ def main_module(path, optimizers, destination):
 
     for optimizer in optimizers:
 
-        optimizer(mod, package=None)
+        optimizer(mod)
 
     make_pyc(
         mod,

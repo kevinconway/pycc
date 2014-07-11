@@ -36,7 +36,6 @@ def test_module_loader_load(pycc_dir):
     mod = mloader.load()
 
     assert mod.location == mloader.path
-    assert mod.path is None
 
 
 def test_package_loader_fail(current_dir):

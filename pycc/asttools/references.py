@@ -50,3 +50,13 @@ def add_sibling_references(node):
                 index += 1
                 child.previous = children[index - 1]
                 child.next = children[index + 1]
+
+
+def copy_location(new_node, old_node):
+    """ast.copy_location wrapper that also copies node references."""
+
+    new_node = ast.copy_location(new_node, old_node)
+    new_node.parent = old_node.parent
+    new_node.previous, new_node.next = old_node.previous, old_node.next
+
+    return new_node
