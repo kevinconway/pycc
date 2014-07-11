@@ -232,7 +232,7 @@ class ConstantInliner(base.Transformer, ast.NodeTransformer):
         return self.generic_visit(node)
 
 
-def optimize(module):
+def optimize(module, *args, **kwargs):
     """Run the optimization chain for constant value inlining."""
 
     found = ConstantFinder(module)()

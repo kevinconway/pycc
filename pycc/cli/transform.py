@@ -16,23 +16,23 @@ def parse_args():
     return parser.parse_args()
 
 
-def main_module(path, optimizers):
+def main_module(path, optimizers, args):
 
     mod = loader.ModuleLoader(path).load()
 
     for optimizer in optimizers:
-        optimizer(mod)
+        optimizer(mod, **args.__dict__)
 
     print SourceCodeRenderer.render(mod.node)
 
 
-def main_package(path, optimizers):
+def main_package(path, optimizers, args):
 
     pkg = loader.PackageLoader(path).load()
 
     for mod in pkg.modules():
         for optimizer in optimizers:
-            optimizer(mod, package=pkg)
+            optimizer(mod, **args.__dict__)
 
         print SourceCodeRenderer.render(mod.node)
 
@@ -53,11 +53,11 @@ def main():
 
     if os.path.isdir(path):
 
-        main_package(path, optimizers)
+        main_package(path, optimizers, args)
 
     else:
 
-        main_module(path, optimizers)
+        main_module(path, optimizers, args)
 
 
 if __name__ == '__main__':
