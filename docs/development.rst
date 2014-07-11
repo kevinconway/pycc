@@ -21,9 +21,14 @@ has the following signature:
 
 .. code-block:: python
 
-    function optimize(module, package=None):
+    function optimize(module, *args, **kwargs):
 
         pass
+
+This function will be run by the CLI tools to execute your optimization chain.
+The first argument with always be a `module.Module` object. The rest of the
+arguments are determined by the CLI. If your optimizer is configurable then
+you may add additional named arguments after 'module'.
 
 Now add a line like `pycc_my_optimizer = pycc.optimizers.my_optimizer:optimize`
 to the `pycc.optimizers` section in `setup.py`. The `pycc_` prefix is important
@@ -44,6 +49,13 @@ Finally, add a new argument to the parser in the `register` function of the
 
 The value of the `const` parameter should match the name you selected in the
 `pycc.optimizers` entry points from above.
+
+If you want to make a configuration value for your optimizer accessible as a
+CLI flag then you may add additional arguments to the parser. Just be sure to
+choose a name that is not so generic as to cause conflicts. All CLI arguments
+will be passed to your `optimize` function as keyword arguments. You can
+collect the values either through the `**kwargs` interface or by simply
+accepting a named parameter in the `optimize` function.
 
 Once you have this basic scaffolding set up you will be able to see your new
 optimizer flag in the command line scripts. As you add actual code you will be
@@ -110,9 +122,9 @@ Writing third party extensions that plug into the PyCC commands requires you
 to provide two interfaces on the right entry points.
 
 On the `pycc.optimizers` entry point you must expose a callable which accepts
-a `module.Module` object as the first parameter and an optional
-`module.Package` object as the second parameter. The name of this entry point
-must be prefixed with `pycc_`.
+a `module.Module` object as the first parameter, any number of named parameters
+which correspond with relevant CLI args added by your module, `*args`,
+and`**kwargs`. The name of this entry point must be prefixed with `pycc_`.
 
 On the `pycc.cli.args` entry point you must expose a callable which accepts
 an argument parser from `argparse`. Your function must use this parser to
@@ -130,3 +142,7 @@ register an argument as follows:
 
 The value of the `const` parameter should match exactly the name give to the
 `pycc.optimizers` entry point.
+
+You may also register arguments needed to configure your optimizer. They will
+be passed into your `pycc.optimizers` entry point addition as keyword
+arguments.

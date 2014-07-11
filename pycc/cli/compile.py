@@ -43,13 +43,13 @@ def make_pyc(module, destination):
         pyc.write(py_compile.MAGIC)
 
 
-def main_module(path, optimizers, destination):
+def main_module(path, optimizers, destination, args):
 
     mod = loader.ModuleLoader(path).load()
 
     for optimizer in optimizers:
 
-        optimizer(mod)
+        optimizer(mod, **args.__dict__)
 
     make_pyc(
         mod,
@@ -60,7 +60,7 @@ def main_module(path, optimizers, destination):
     )
 
 
-def main_package(path, optimizers, destination):
+def main_package(path, optimizers, destination, args):
 
     pkg = loader.PackageLoader(path).load()
 
@@ -75,7 +75,7 @@ def main_package(path, optimizers, destination):
 
         for optimizer in optimizers:
 
-            optimizer(mod, package=pkg)
+            optimizer(mod, **args.__dict__)
 
         output_path = mod.path + ".pyc"
 
@@ -122,11 +122,11 @@ def main():
 
     if os.path.isdir(path):
 
-        main_package(path, optimizers, destination)
+        main_package(path, optimizers, destination, args)
 
     else:
 
-        main_module(path, optimizers, destination)
+        main_module(path, optimizers, destination, args)
 
 
 if __name__ == '__main__':
