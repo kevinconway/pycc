@@ -1,11 +1,8 @@
 """Objects that load files into Module and Package objects."""
 
-import ast
 import os
 
 from .asttools import parse
-from .asttools import references
-from .module import Module
 from .module import Package
 
 

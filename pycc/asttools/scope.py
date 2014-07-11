@@ -20,6 +20,7 @@ class ScopeType(object):
 
         return (cls.Module, cls.Function, cls.Class)
 
+
 class Scope(object):
     """Represents a lexical scope.
 
