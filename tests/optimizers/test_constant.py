@@ -6,11 +6,7 @@ from pycc import module
 from pycc.asttools import parse
 from pycc.optimizers import constant
 
-
-@pytest.fixture
-def node():
-
-    src = """
+sample_source = """
 ONE = 1
 TWO = 2
 THREE = 3
@@ -37,9 +33,13 @@ print EIGHT, NINE
 def TEN():
 
     print EIGHT
-    """
+"""
 
-    return parse.parse(src)
+
+@pytest.fixture
+def node():
+
+    return parse.parse(sample_source)
 
 
 @pytest.fixture
