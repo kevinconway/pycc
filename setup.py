@@ -7,6 +7,9 @@ with open('README.rst') as f:
 with open('LICENSE') as f:
     license = f.read()
 
+with open('requirements.txt') as f:
+    requirements = f.readlines()
+
 setup(
     name='pycc',
     version='1.0.0',
@@ -18,7 +21,7 @@ setup(
     long_description=readme,
     classifiers=[],
     packages=find_packages(exclude=['tests', 'build', 'dist', 'docs']),
-    requires=['astkit', 'pytest'],
+    requires=requirements,
     entry_points={
         'console_scripts': [
             'pycc-transform = pycc.cli.transform:main',
