@@ -1,11 +1,15 @@
 """Utilities for adding node references to AST nodes."""
 
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import ast
 
 
 def add_parent_references(node):
     """Add a parent backref to all child nodes."""
-
     nodes = [node]
     node.parent = None
 
@@ -20,7 +24,6 @@ def add_parent_references(node):
 
 def add_sibling_references(node):
     """Add sibling references to all child nodes."""
-
     nodes = [node]
 
     while len(nodes) > 0:
@@ -53,10 +56,23 @@ def add_sibling_references(node):
 
 
 def copy_location(new_node, old_node):
-    """ast.copy_location wrapper that also copies node references."""
+    """An ast.copy_location extension.
 
+    This function behaves identically to the standard ast.copy_location except
+    that it also copies parent and sibling references.
+    """
     new_node = ast.copy_location(new_node, old_node)
     new_node.parent = old_node.parent
     new_node.previous, new_node.next = old_node.previous, old_node.next
 
     return new_node
+
+
+def get_top_node(node):
+    """Get the top level ast node by backtracking through the parent refs."""
+    top = node
+    while node.parent is not None:
+
+        top = node.parent
+
+    return top
