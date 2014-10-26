@@ -71,7 +71,7 @@ def copy_location(new_node, old_node):
 def get_top_node(node):
     """Get the top level ast node by backtracking through the parent refs."""
     top = node
-    while node.parent is not None:
+    while top.parent is not None:
 
         top = node.parent
 
