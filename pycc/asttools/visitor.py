@@ -34,11 +34,11 @@ class NodeVisitorShallow(ast.NodeVisitor):
         """
         for child in itertools.chain((node,), ast.iter_child_nodes(node)):
 
-            method = 'visit_' + node.__class__.__name__
+            method = 'visit_' + child.__class__.__name__
             visitor = getattr(self, method, None)
             if visitor is not None:
 
-                visitor(node)
+                visitor(child)
 
 
 class NodeVisitorDeep(ast.NodeVisitor):
@@ -69,11 +69,11 @@ class NodeVisitorDeep(ast.NodeVisitor):
 
                 nodes.append(child)
 
-            method = 'visit_' + node.__class__.__name__
+            method = 'visit_' + current.__class__.__name__
             visitor = getattr(self, method, None)
             if visitor is not None:
 
-                visitor(node)
+                visitor(current)
 
 
 class NodeIterShallow(ast.NodeVisitor):
@@ -106,11 +106,11 @@ class NodeIterShallow(ast.NodeVisitor):
         """
         for child in itertools.chain((node,), ast.iter_child_nodes(node)):
 
-            method = 'visit_' + node.__class__.__name__
+            method = 'visit_' + child.__class__.__name__
             visitor = getattr(self, method, None)
             if visitor is not None:
 
-                visit_value = visitor(node)
+                visit_value = visitor(child)
                 try:
 
                     for value in visit_value:
@@ -155,11 +155,11 @@ class NodeIterDeep(ast.NodeVisitor):
 
                 nodes.append(child)
 
-            method = 'visit_' + node.__class__.__name__
+            method = 'visit_' + current.__class__.__name__
             visitor = getattr(self, method, None)
             if visitor is not None:
 
-                visit_value = visitor(node)
+                visit_value = visitor(current)
                 try:
 
                     for value in visit_value:
