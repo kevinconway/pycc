@@ -13,15 +13,15 @@ from ..asttools import scope as scopetools
 from ..asttools import visitor as visitortools
 
 
-class NameGenerator(visitortools.NodeIterDeep, nametools.NameVisitorMixin):
+class NameGenerator(visitortools.NodeVisitorIter, nametools.NameVisitorMixin):
 
     """Visitor which produces Name objects."""
 
-    def visit(self, node):
+    def visit(self):
         """Produce Name objects from a NameVisitorMixin."""
         return (
             Name(n)
-            for n in super(self, NameGenerator).visit(node)
+            for n in super(self, NameGenerator).visit()
         )
 
 
@@ -83,7 +83,7 @@ class Name(object):
             search_path = reftools.get_top_node(self._node)
 
         return (
-            n for n in NameGenerator().visit(search_path)
+            n for n in NameGenerator(search_path).visit()
             if n == self
         )
 

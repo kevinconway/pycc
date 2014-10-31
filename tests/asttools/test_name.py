@@ -145,10 +145,10 @@ def builtin_use(node):
 @pytest.fixture
 def name_iter(node):
     """Get iterable of all names in the source."""
-    class TestVisitor(visitor.NodeIterDeep, name.NameVisitorMixin):
+    class TestVisitor(visitor.NodeVisitorIter, name.NameVisitorMixin):
         pass
 
-    return TestVisitor().visit(node)
+    return TestVisitor(node).visit()
 
 
 def test_declaration(decl_node, return_node, assign_node):
