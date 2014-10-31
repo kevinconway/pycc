@@ -6,166 +6,138 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import ast
+import collections
 import itertools
 
 
-class NodeVisitorShallow(ast.NodeVisitor):
+class NodeVisitor(object):
 
-    """Stand-in for ast.NodeVisitor which is non-recursive.
+    """Alternate visitor implementation.
 
-    This visitor only looks at first generation children and does not descend
-    into children of children, etc.
+    This NodeVisitor interface differs slightly from the standard
+    implementation. Primarily, the AST node to visit is given during
+    initialization rather than at visit time. This has the effect of making
+    instances of this NodeVisitor only usable with one AST and only one time.
+    Subsequent calls will have no effect.
+
+    This implementation provides a "generic_visit" method which can be used
+    within individual visit methods in order to evaluate all the children of
+    a node. This method may be used but should not be overwritten.
+
+    This implementation provides no return value from the visit method. This
+    makes it not well suited for use in a compiler.
+
+    The benefit of this implementation is that it does not leverage function
+    recursion. Rough benchmarks show this to be somewhere between two and four
+    times faster than the default implementation.
     """
 
-    def visit(self, node):
-        """Visit a node.
+    def __init__(self, node):
+        """Seed the visitor with an AST node.
 
-        This function will look at the instance of NodeVisitorShallow for a
-        method which matches visit_<Node> where <Node> matches the name of an
-        ast.AST class. This behaviour matches that of the standard
-        ast.NodeVisitor.
-
-        This implementation differs from the standard in that it will only
-        search the first order children of a given node. The given node is also
-        processed. The generic_visit method is also not used in this
-        implementation.
-
-        This method does not return a value.
+        All calls to visit will begin with this node.
         """
-        for child in itertools.chain((node,), ast.iter_child_nodes(node)):
+        self._node = node
+        self._nodes = collections.deque((self._node,))
 
-            method = 'visit_' + child.__class__.__name__
-            visitor = getattr(self, method, None)
-            if visitor is not None:
+    def generic_visit(self, node):
+        """Queue up all child nodes for visiting."""
+        self._nodes.extend(ast.iter_child_nodes(node))
 
-                visitor(child)
+    def visit(self):
+        """Visit the nodes.
+
+        This method will always start with the node given at initialization.
+        """
+        while len(self._nodes) > 0:
+
+            current = self._nodes.popleft()
+            method = 'visit_' + current.__class__.__name__
+            visitor = getattr(self, method, self.generic_visit)
+            visitor(current)
 
 
-class NodeVisitorDeep(ast.NodeVisitor):
+class NodeVisitorIter(NodeVisitor):
 
-    """Stand-in for ast.NodeVisitor which is non-recursive.
+    """NodeVisitor subclass which produces all visitor return values.
 
-    This visitor looks at all children within the tree represented by the node
-    given at initialization.
+    Unlike the base NodeVisitor in this module, this subclass returns an
+    iterable from the visit method which contains all values returned by
+    individual visit methods.
     """
 
-    def visit(self, node):
-        """Visit a node.
+    def visit(self):
+        """Visit the nodes.
 
-        This function will look at the instance of NodeVisitorDeep for a
-        method which matches visit_<Node> where <Node> matches the name of an
-        ast.AST class. This behaviour matches that of the standard
-        ast.NodeVisitor.
-
-        This implementation should be identical to the standard in the way it
-        searches and processes AST nodes except that it does not use recursion,
-        does not return a value, and does not use the generic_visit method.
+        This method returns an iterable of values returned by visitor methods.
         """
-        nodes = [node]
-        while len(nodes) > 0:
+        while len(self._nodes) > 0:
 
-            current = nodes.pop()
-            for child in ast.iter_child_nodes(current):
+            current = self._nodes.popleft()
+            method = 'visit_' + current.__class__.__name__
+            visitor = getattr(self, method, self.generic_visit)
+            value = visitor(current)
+            if value is not None:
 
-                nodes.append(child)
+                yield value
 
+
+class NodeTransformer(NodeVisitor):
+
+    """Alternate implementation of ast.NodeTransformer.
+
+    This implementation subclasses the non-recursive NodeVisitor from this
+    module. This implementation should behave identically to that of the
+    standard behaviour in how it replaces nodes.
+
+    However this implementation differs in behaviour as layed out in the
+    documentation for the non-recursive NodeVisitor. Another major difference
+    in behaviour is that the visit method does not return the modified AST.
+    Instead you must rely on the fact that the node is modified in place. The
+    standard implementation also modifies the AST in place, it simply returned
+    the resulting value for convenience.
+
+    This implementation relies on the parent and sibling references provided
+    by the asttools.references module.
+    """
+
+    def _replace(self, new, old):
+        """Replace a node in the AST with a new one."""
+        parent = old.parent
+        if parent is None:
+
+            raise ValueError("Attempting to replace the top level node.")
+
+        for field, original in ast.iter_fields(parent):
+
+            if isinstance(original, ast.AST):
+
+                if new is None:
+
+                    delattr(parent, field)
+                    continue
+
+                setattr(parent, field, new)
+
+            if isinstance(original, list) and old in original:
+
+                if new is None:
+
+                    original.remove(old)
+                    continue
+
+                original[original.index(old)] = new
+
+    def visit(self):
+        """Visit the nodes."""
+        while len(self._nodes) > 0:
+
+            current = self._nodes.popleft()
             method = 'visit_' + current.__class__.__name__
             visitor = getattr(self, method, None)
             if visitor is not None:
 
-                visitor(current)
+                self._replace(visitor(current), current)
+                continue
 
-
-class NodeIterShallow(ast.NodeVisitor):
-
-    """Stand-in for ast.NodeVisitor which produces an iterable of values.
-
-    This visitor only looks at first generation children and does not descend
-    into children of children, etc. The return values of each visitor method
-    are returned as an iterable from the visit method.
-    """
-
-    def visit(self, node):
-        """Visit a node.
-
-        This function will look at the instance of NodeIterShallow for a
-        method which matches visit_<Node> where <Node> matches the name of an
-        ast.AST class. This behaviour matches that of the standard
-        ast.NodeVisitor.
-
-        This implementation differs from the standard in that it will only
-        search the first order children of a given node. The given node is also
-        processed. The generic_visit method is also not used in this
-        implementation.
-
-        This method returns an iterable of values returned by the visit_<Node>
-        methods that are executed during the visit.
-
-        If a visitor method returns an iterable then each value will appear
-        in the return rather than the iterable itself.
-        """
-        for child in itertools.chain((node,), ast.iter_child_nodes(node)):
-
-            method = 'visit_' + child.__class__.__name__
-            visitor = getattr(self, method, None)
-            if visitor is not None:
-
-                visit_value = visitor(child)
-                try:
-
-                    for value in visit_value:
-
-                        yield value
-
-                except TypeError:
-
-                    yield visit_value
-
-
-class NodeIterDeep(ast.NodeVisitor):
-
-    """Stand-in for ast.NodeVisitor which produces an iterable of values.
-
-    This visitor looks at all children within the tree represented by the node
-    given at initialization. The return values of each visitor method are
-    returned as an iterable from the visit method.
-    """
-
-    def visit(self, node):
-        """Visit a node.
-
-        This function will look at the instance of NodeVisitorDeep for a
-        method which matches visit_<Node> where <Node> matches the name of an
-        ast.AST class. This behaviour matches that of the standard
-        ast.NodeVisitor.
-
-        This implementation should be identical to the standard in the way it
-        searches and processes AST nodes except that it does not use recursion,
-        the return value is an iterable of values returned by visit_<Node>
-        methods, and it does not use the generic_visit method.
-
-        If a visitor method returns an iterable then each value will appear
-        in the return rather than the iterable itself.
-        """
-        nodes = [node]
-        while len(nodes) > 0:
-
-            current = nodes.pop()
-            for child in ast.iter_child_nodes(current):
-
-                nodes.append(child)
-
-            method = 'visit_' + current.__class__.__name__
-            visitor = getattr(self, method, None)
-            if visitor is not None:
-
-                visit_value = visitor(current)
-                try:
-
-                    for value in visit_value:
-
-                        yield value
-
-                except TypeError:
-
-                    yield visit_value
+            self.generic_visit(current)
