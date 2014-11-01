@@ -7,7 +7,6 @@ from __future__ import unicode_literals
 
 import ast
 
-from . import base
 from ..asttools import name as nametools
 from ..asttools import visitor
 from ..astwrappers import name as namewrap
@@ -166,15 +165,11 @@ class ConstantInliner(visitor.NodeTransformer):
         return node
 
 
-class ConstantOptimizer(base.Optimizer):
+def optimize(node):
+    """Optimize an AST by in-lining constant values."""
+    modified = True
+    while modified is True:
 
-    """Optimizer which in-lines constant values."""
-
-    def __call__(self, node):
-        """In-line constant values within the given AST."""
-        modified = True
-        while modified is True:
-
-            visitor = ConstantInliner(node)
-            visitor.visit()
-            modified = visitor.modified
+        visitor = ConstantInliner(node)
+        visitor.visit()
+        modified = visitor.modified
