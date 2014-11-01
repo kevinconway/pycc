@@ -38,7 +38,7 @@ def node():
 
 def test_constant_inliner(node):
     """Test that constant values are inlined."""
-    constant.ConstantOptimizer()(node)
+    constant.optimize(node)
 
     # Check assignment values using constants.
     assert node.body[2].value.n == 3
