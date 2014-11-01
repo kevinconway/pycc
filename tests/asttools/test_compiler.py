@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 
 import pytest
 
+from pycc import pycompat
 from pycc.asttools import parse
 from pycc.asttools import compiler
 
@@ -28,6 +29,10 @@ def test_bytecode_compiler(node):
     compiler.ByteCodeCompiler()(node)
 
 
+@pytest.mark.skipif(
+    pycompat.PY3 and pycompat.VERSION.minor > 3,
+    reason="astkit does not yet support >=PY34",
+)
 def test_source_code_compilter(node):
     """Ensure that source code can be generated without errors."""
     compiler.SourceCodeCompiler()(node)
