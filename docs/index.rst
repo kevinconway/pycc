@@ -10,6 +10,7 @@ PyCC is a Python code optimizer. It rewrites your code to make it faster.
    usage
    optimizers
    development
+   Auto-generated API Docs <api/modules>
 
 Basic Example
 =============

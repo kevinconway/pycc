@@ -9,30 +9,33 @@ Transforming Code
 
 PyCC is quite a young project. As a result, you may be hesitant to simply trust
 the output and skip straight to the compile step. Instead, you may want to
-see an example of what the optimizer has produced so that you can verify that
+see an example of what the optimizer has produced so you can verify that
 it is, indeed, both valid Python and acceptable code. This is what the
 `pycc-transform` command is for.
 
 Usage for this command is simple:
 
-    pycc-transform <python_file.py> [--optimizer_option]
+    pycc-transform --source=<python_file.py> [--optimizer_option]
 
 All optimization is disabled by default. Use the appropriate flags to enable
 the optimizations you want to apply. At the time of writing the full options
 listing for pycc-transform was:
 
-    usage: pycc-transform [-h] [--constants] source
+    usage: pycc-transform [-h] --source SOURCE [--destination DESTINATION]
+                      [--constants]
 
     PyCC Transformer
 
-    positional arguments:
-      source       Path to the python source code. May be file or directory.
-
     optional arguments:
-      -h, --help   show this help message and exit
-      --constants  Replace constant expressions with inline literals.
+      -h, --help            show this help message and exit
+      --source SOURCE       Path to load the Python source from.
+      --destination DESTINATION
+                            Path to place the optimized result or "stdout".
+      --constants           Inline constant values.
 
-Running this command will output the optimized source code to the terminal.
+Running this command will generate a file called <python_file>_optimized.py
+that you can view. To print the results directly to the terminal simply add the
+'--destination="stdout"' option.
 
 If you run pycc-transform and it produces invalid Python code or it changes the
 code such that it no longer does what it is supposed to do then please post the
@@ -45,19 +48,17 @@ Compiling Code
 Once you are comfortable with the way PyCC alters your code you can start
 running the `pycc-compile` command:
 
-    usage: pycc-compile [-h] [--constants] [--destination DESTINATION] source
+    usage: pycc-compile [-h] --source SOURCE [--destination DESTINATION]
+                    [--constants]
 
     PyCC Compiler
 
-    positional arguments:
-      source                Path to the python source code. May be file or
-                            directory.
-
     optional arguments:
       -h, --help            show this help message and exit
-      --constants           Replace constant expressions with inline literals.
+      --source SOURCE       Path to load the Python source from.
       --destination DESTINATION
-                            Path to place compiled binaries in.
+                            Path to place the optimized result or "stdout".
+      --constants           Inline constant values.
 
 The compiler can be run on either individual Python modules or it can be
 pointed at a Python package. By default the script will drop the '.pyc' files
