@@ -64,6 +64,7 @@ def test_name_generator(node):
         'None',
         'reference_somewhere',
         'use_reference',
+        'print',
         'read_with_global',
         'read_global',
         'write_with_global',

@@ -6,6 +6,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import ast
+import itertools
 
 from .. import enum
 from .. import pycompat
@@ -75,13 +76,39 @@ def declaration(node, start=None):
 
             if isinstance(child, ast.arguments):
 
-                if child.vararg == node.id or child.kwarg == node.id:
+                args = ()
+                if pycompat.PY2:
 
-                    return child
+                    args = itertools.chain(
+                        (child.vararg, child.kwarg,),
+                        (c.id for c in child.args),
+                    )
 
-                for arg in child.args:
+                if pycompat.PY3 and pycompat.VERSION.minor < 4:
 
-                    if arg.id == node.id:
+                    args = itertools.chain(
+                        (child.vararg, child.kwarg,),
+                        (c.arg for c in child.args),
+                        (c.arg for c in child.kwonlyargs),
+                    )
+
+                if pycompat.PY3 and pycompat.VERSION.minor > 3:
+
+                    args = itertools.chain(
+                        (
+                            child.vararg.arg
+                            if child.vararg is not None else None,
+
+                            child.kwarg.arg
+                            if child.kwarg is not None else None,
+                        ),
+                        (c.arg for c in child.args),
+                        (c.arg for c in child.kwonlyargs),
+                    )
+
+                for arg in args:
+
+                    if arg == node.id:
 
                         return child
 
