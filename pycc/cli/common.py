@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 
 import collections
 import os
+import sys
 
 from ..asttools import parse
 from .extensions import utils
@@ -86,7 +87,13 @@ def write_result(body, path, path_override=None):
     dest = abspath(path)
     if path_override is not None:
 
-        file_name = os.path.split(path)[1] + 'c'
+        if path_override == 'stdout':
+
+            sys.stdout.write(body)
+            sys.stdout.write('\n')
+            return None
+
+        file_name = os.path.split(path)[1]
         dest = os.path.join(abspath(path_override), file_name)
 
     # Lazy create destination directories if they don't already exist.
