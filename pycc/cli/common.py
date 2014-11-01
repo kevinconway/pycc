@@ -23,7 +23,7 @@ def register_arguments(parser):
     parser.add_argument(
         '--destination',
         required=False,
-        help='Path to place compiled binaries in.',
+        help='Path to place the optimized result or "stdout".',
     )
 
     utils.register_extensions(parser)
