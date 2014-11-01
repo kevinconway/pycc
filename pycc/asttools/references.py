@@ -73,6 +73,6 @@ def get_top_node(node):
     top = node
     while top.parent is not None:
 
-        top = node.parent
+        top = top.parent
 
     return top
