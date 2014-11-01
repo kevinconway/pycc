@@ -7,7 +7,6 @@ from __future__ import unicode_literals
 
 import ast
 import collections
-import itertools
 
 
 class NodeVisitor(object):
@@ -70,6 +69,9 @@ class NodeVisitorIter(NodeVisitor):
         """Visit the nodes.
 
         This method returns an iterable of values returned by visitor methods.
+
+        If multiple values are returned by a visitor they will all be included
+        in the resulting iterable.
         """
         while len(self._nodes) > 0:
 
@@ -79,7 +81,15 @@ class NodeVisitorIter(NodeVisitor):
             value = visitor(current)
             if value is not None:
 
-                yield value
+                try:
+
+                    for v in value:
+
+                        yield v
+
+                except TypeError:
+
+                    yield value
 
 
 class NodeTransformer(NodeVisitor):

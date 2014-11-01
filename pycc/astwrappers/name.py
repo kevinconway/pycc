@@ -21,7 +21,7 @@ class NameGenerator(visitortools.NodeVisitorIter, nametools.NameVisitorMixin):
         """Produce Name objects from a NameVisitorMixin."""
         return (
             Name(n)
-            for n in super(self, NameGenerator).visit()
+            for n in super(NameGenerator, self).visit()
         )
 
 
@@ -46,8 +46,13 @@ class Name(object):
         self._node = node
         self._scope = scopetools.parent_scope(self._node)
         self._declaration = nametools.declaration(self._node)
-        self._declaration_scope = scopetools.parent_scope(self._declaration)
         self._source = nametools.name_source(self._node, self._declaration)
+        self._declaration_scope = None
+        if self._source is not nametools.NAME_SOURCE.BUILTIN:
+
+            self._declaration_scope = scopetools.parent_scope(
+                self._declaration,
+            )
 
     @property
     def node(self):
@@ -77,7 +82,7 @@ class Name(object):
         contain all uses of the name in the module. Otherwise only uses within
         the lexical scope of the declaration are contained within the iterable.
         """
-        search_path = self._declaration
+        search_path = self._declaration_scope
         if search_path is None:
 
             search_path = reftools.get_top_node(self._node)
@@ -96,15 +101,16 @@ class Name(object):
         """
         return (
             n for n in self.uses
-            if isinstance(n.ctx, ast.Store()) or isinstance(n.ctx, ast.Param())
+            if isinstance(n.node.ctx, ast.Store) or
+            isinstance(n.node.ctx, ast.Param)
         )
 
     @property
     def constant(self):
         """True if name is assigned to only once within its lexical scope."""
-        # Built in names are never assigned to. Using != 1 to compensate for
+        # Built in names are never assigned to. Using == 1 to compensate for
         # those names with 0 assignments.
-        return len(tuple(self.assignments)) != 1
+        return len(tuple(self.assignments)) == 1
 
     def __repr__(self):
         """Get a string repr of the Name."""

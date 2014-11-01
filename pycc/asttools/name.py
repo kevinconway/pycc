@@ -152,6 +152,7 @@ class NameVisitorMixin(object):
 
     def visit_FunctionDef(self, node):
         """Get a surrogate name from a function or class definition."""
+        self.generic_visit(node)
         return references.copy_location(
             ast.Name(
                 id=node.name,
