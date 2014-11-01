@@ -2,15 +2,13 @@ language: python
 python:
     - "2.6"
     - "2.7"
+    - "3.2"
     - "3.3"
     - "3.4"
 install:
-    - pip install -U pep8 --use-mirrors
-    - pip install -U pyflakes --use-mirrors
-    - pip install -U pylint --use-mirrors
+    - pip install -r requirements.txt
     - pip install ./
 script:
     - pep8 pycc/
     - pyflakes pycc/
-    - pylint pycc/
     - py.test tests/
