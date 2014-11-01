@@ -1,44 +1,100 @@
-"""Common utilities for CLI modules"""
+"""Common utilities for CLI modules."""
 
-from pkg_resources import iter_entry_points
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import collections
+import os
+
+from ..asttools import parse
+from .extensions import utils
 
 
-def add_common_args(parser):
+def register_arguments(parser):
     """Add arguments required for all CLI tools."""
-
     parser.add_argument(
-        'source',
-        help='Path to the python source code. May be file or directory.',
+        '--source',
+        required=True,
+        help='Path to load the Python source from.',
+    )
+    parser.add_argument(
+        '--destination',
+        required=False,
+        help='Path to place compiled binaries in.',
     )
 
-    for registration in iter_entry_points('pycc.cli.args'):
-
-        registration.load()(parser)
+    utils.register_extensions(parser)
 
     return parser
 
 
-def optimizers_from_args(args):
-    """Return an iterable of optimizer functions."""
+PySource = collections.namedtuple('PySource', ('node', 'path'))
 
-    optimizers = []
 
-    argd = args.__dict__
-    for arg in argd:
+def abspath(path):
+    """Resolve a path to an absolute path."""
+    return os.path.realpath(
+        os.path.expanduser(
+            os.path.expandvars(
+                path,
+            ),
+        ),
+    )
 
-        if hasattr(argd[arg], 'startswith') and argd[arg].startswith('pycc_'):
 
-            for optimizer in iter_entry_points('pycc.optimizers', argd[arg]):
+def load_dir(path):
+    """Get an iterable of PySource from the given directory."""
+    for root, subdirs, files in os.walk(abspath(path)):
 
-                optimizers.append(optimizer.load())
-                break
+        files = (abspath(os.path.join(root, fname)) for fname in files)
+        files = (fname for fname in files if fname.endswith('.py'))
+        for file_name in files:
 
-            else:
+            with open(file_name, 'r') as file_handle:
 
-                raise ImportError(
-                    "Could not load optimizer plugin named {0}.".format(
-                        argd[arg],
-                    )
-                )
+                source = file_handle.read()
+                yield PySource(parse.parse(source), file_name)
 
-    return optimizers
+
+def load_path(path):
+    """Get an iterable of PySource from the given path."""
+    path = abspath(path)
+
+    if os.path.isdir(path):
+
+        return load_dir(path)
+
+    with open(path, 'r') as file_handle:
+
+        return (PySource(parse.parse(file_handle.read()), path),)
+
+
+def run_optimizers(args):
+    """Optimize each of an iterable of PySource objects."""
+    sources = tuple(load_path(args.source))
+    for source in sources:
+
+        utils.execute(args, source.node)
+
+    return sources
+
+
+def write_result(body, path, path_override=None):
+    """Write the body into a file in path or path_override."""
+    dest = abspath(path)
+    if path_override is not None:
+
+        file_name = os.path.split(path)[1] + 'c'
+        dest = os.path.join(abspath(path_override), file_name)
+
+    # Lazy create destination directories if they don't already exist.
+    dest_dir = os.path.split(dest)[0]
+    if not os.path.isdir(dest_dir):
+
+        os.makedirs(dest_dir, exists_ok=True)
+
+    with open(dest, 'wb') as output:
+
+        output.write(body)
