@@ -3,7 +3,7 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-# Disabling unicode literals to keep py2 text ascii bytes for compiling.
+from __future__ import unicode_literals
 
 import ast
 import io
@@ -25,7 +25,12 @@ def _code_to_bytecode_py2(code):
     import py_compile
     import marshal
 
-    bytecode = io.BytesIO('\0\0\0\0')
+    bytecode = io.BytesIO()
+    # NOTE: Intentionally not using the BytesIO initializer to write the inital
+    # bytes. Initializing the objects with '\0\0\0\0' resulted in no bytes
+    # being written to the buffer. Instead, use the write method explicitly to
+    # write the placeholder for the magic number.
+    bytecode.write(str('\0\0\0\0'))
     py_compile.wr_long(bytecode, pycompat.long(time.time()))
     bytecode.write(marshal.dumps(code))
     bytecode.seek(0, 0)
@@ -44,7 +49,8 @@ def _code_to_bytecode_py3(code):
     import py_compile
     import marshal
 
-    bytecode = io.BytesIO('\0\0\0\0')
+    bytecode = io.BytesIO()
+    bytecode.write(str('\0\0\0\0'))
     py_compile.wr_long(bytecode, pycompat.long(time.time()))
     py_compile.wr_long(bytecode, pycompat.long(0))
     bytecode.write(marshal.dumps(code))
