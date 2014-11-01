@@ -12,7 +12,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='pycc',
-    version='1.0.0',
+    version='2.0.0',
     url='https://github.com/kevinconway/pycc',
     license=license,
     description='Python code optimizer.',
