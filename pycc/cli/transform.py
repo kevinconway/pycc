@@ -1,63 +1,39 @@
-"""CLI tool for creating samples of optimized source code."""
+"""CLI tool for generating optimized Python source code."""
+
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import argparse
-import os
 
-from astkit.render import SourceCodeRenderer
-
+from ..asttools import compiler
 from . import common
-from .. import loader
 
 
 def parse_args():
-
+    """Get user input."""
     parser = argparse.ArgumentParser(description='PyCC Transformer')
-    parser = common.add_common_args(parser)
+    common.register_arguments(parser)
     return parser.parse_args()
 
 
-def main_module(path, optimizers, args):
-
-    mod = loader.ModuleLoader(path).load()
-
-    for optimizer in optimizers:
-        optimizer(mod, **args.__dict__)
-
-    print SourceCodeRenderer.render(mod.node)
-
-
-def main_package(path, optimizers, args):
-
-    pkg = loader.PackageLoader(path).load()
-
-    for mod in pkg.modules():
-        for optimizer in optimizers:
-            optimizer(mod, **args.__dict__)
-
-        print SourceCodeRenderer.render(mod.node)
-
-
 def main():
-
+    """Generate optimized source code."""
     args = parse_args()
+    optimized = common.run_optimizers(args)
+    source_compiler = compiler.SourceCodeCompiler()
 
-    optimizers = common.optimizers_from_args(args)
+    for module in optimized:
 
-    path = os.path.realpath(
-        os.path.expanduser(
-            os.path.expandvars(
-                args.source
-            )
+        bytecode = source_compiler(
+            module.node
         )
-    )
-
-    if os.path.isdir(path):
-
-        main_package(path, optimizers, args)
-
-    else:
-
-        main_module(path, optimizers, args)
+        common.write_result(
+            body=bytecode,
+            path=module.path.replace('.py', '') + '_optimized.py',
+            path_override=args.destination
+        )
 
 
 if __name__ == '__main__':

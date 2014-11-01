@@ -9,140 +9,191 @@ Adding a new optimizer to the core project is (hopefully) a straightforward
 process. You are, of course, welcome to use any kind of workflow you like. For
 this walkthrough I will be using my own as an example.
 
-Step 1: Light Scaffolding
--------------------------
+Step 1: Create An Extension Object
+----------------------------------
 
-The first step is getting the CLI utilities bootstrapped for you new optimizer
-so you can use the `pycc-transform` command to help iterate and work out bugs.
+The first step is getting your extension bootstrapped into the CLI right away.
+This will allow you to use the `pycc-transform` command as soon as your code
+is written. Seeing the transformed output early makes it a little easier to
+debug and iterate.
 
-Start by creating a new module in the `optimizers` subpackage to house your
-work, name it something relevant, and put function in it named `optimize` that
-has the following signature:
+Start by creating a new module in the `pycc.cli.extensions` package. Normal
+Python naming rules apply. Try to keep it short and descriptive. Inside the
+module start with some light scaffolding like:
 
 .. code-block:: python
 
-    function optimize(module, *args, **kwargs):
+    """Core extension for some new optimizer."""
+
+    from __future__ import division
+    from __future__ import absolute_import
+    from __future__ import print_function
+    from __future__ import unicode_literals
+
+    from . import interfaces
+    from ...optimizers import <my_optimizer_module>
+
+
+    class MyOptimizerExtension(interfaces.CliExtension):
+
+        """A CLI extension which enables my optimization."""
+
+        name = 'makeitfast'
+        description = 'Makes code go fast.'
+        arguments = ()
+
+        @staticmethod
+        def optimize(node):
+            """Make all the code better and faster."""
+            <my_optimizer_module>.optimize(node)
+
+This class will act as the entry point for your optimizer and will be used by
+the CLI tools.
+
+Step 2: Adding Arguments
+------------------------
+
+If you know you want to have CLI arguments to customize the behaviour of your
+optimizer then you need to modify the `arguments` property of your extension
+class. All arguments you add to the tuple should be instances of the
+`interfaces.Arg` class which takes in a `name`, `type`, and `description` at
+initialization. For example, if you wanted to add an integer argument:
+
+.. code-block:: python
+
+    arguments = (interfaces.Arg('num-times', int, 'Go x times faster!'),)
+
+This will add a CLI argument called 'makeitfast-num-times'. Each argument will
+be prepended by the extension name when it appears on the command line.
+However, when you accept this argument in your `optimize` method you should
+simply use the argument name with underscores instead of dashes:
+
+.. code-block:: python
+
+    def optimize(node, num_times=1):
+
+        for x in range(num_times):
+
+            <my_optimizer_module>.optimize(node)
+
+All arguments will be passed in as keyword arguments.
+
+Step 3: Adding An Empty Optimizer
+---------------------------------
+
+Now create a module with a similar name to your extension module in the
+`pycc.optmizers` package. In this module define and empty function called
+`optimize`:
+
+.. code-block:: python
+
+    def optimize(node):
 
         pass
 
-This function will be run by the CLI tools to execute your optimization chain.
-The first argument with always be a `module.Module` object. The rest of the
-arguments are determined by the CLI. If your optimizer is configurable then
-you may add additional named arguments after 'module'.
+This is where you will implement the actual optimization logic. Leave it blank
+just for a moment.
 
-Now add a line like `pycc_my_optimizer = pycc.optimizers.my_optimizer:optimize`
-to the `pycc.optimizers` section in `setup.py`. The `pycc_` prefix is important
-so don't leave it off.
+Step 4: Add An Entry Point
+--------------------------
 
-Finally, add a new argument to the parser in the `register` function of the
-`cli.args` module. Example:
+In the setup.py file you will find a list of setuptools entry points which link
+to other extensions. Add one under `pycc.optimizers` that points back to the
+extension class you created in step 1.
 
 .. code-block:: python
 
-    parser.add_argument(
-        '--my_optimizer',
-        help="Makes stuff go faster.",
-        action='store_const',
-        default=None,
-        const="pycc_my_optimizer",
-    )
+    entry_points={
+        'console_scripts': [
+            'pycc-transform = pycc.cli.transform:main',
+            'pycc-compile = pycc.cli.compile:main',
+        ],
+        'pycc.optimizers': [
+            'pycc_constant_inliner = pycc.cli.extensions.constants:ConstantInlineExtension',
+            'pycc_makeitfaster = pycc.cli.extensions.makeitfast:MyOptimizerExtension',
+        ],
+    },
 
-The value of the `const` parameter should match the name you selected in the
-`pycc.optimizers` entry points from above.
+This will register your new extension with the CLI. Now if you do a
+`pycc-transform --help` you will see a flag, or flags, added to the CLI that
+represent your new addition.
 
-If you want to make a configuration value for your optimizer accessible as a
-CLI flag then you may add additional arguments to the parser. Just be sure to
-choose a name that is not so generic as to cause conflicts. All CLI arguments
-will be passed to your `optimize` function as keyword arguments. You can
-collect the values either through the `**kwargs` interface or by simply
-accepting a named parameter in the `optimize` function.
+Step 5: Optimize
+----------------
 
-Once you have this basic scaffolding set up you will be able to see your new
-optimizer flag in the command line scripts. As you add actual code you will be
-able to see immediate results by running the `pycc-transform` command.
+All the rest is on you. Implement the body of the `optimize` function in your
+`optimizers` module and see the results. All optimization and modifications of
+the AST should be done in-place.
 
-Step 2: Write A Finder
-----------------------
+How you go about implementing the optimizer is up to you. There are, however,
+some tools in PyCC which may prove useful. A full listing of those tools can be
+found in the `asttools <api/pycc.asttools.html>`_ and
+`astwrapper <api/pycc.astwrappers.html>`_ modules.
 
-The next step is implementing the `optimizers.base.Finder` interface. The
-interface is simple. Basically it must return an iterable of
-`optimizers.base.FinderResult` objects when called. The logic used to find
-the AST nodes related to your particular optimization is up to you. I found
-it useful to use the
-`ast.NodeVisitor <https://docs.python.org/2/library/ast.html#ast.NodeVisitor>`_
-class to easily walk the AST.
-
-The basic idea behind the Finder is to group together all the logic needed to
-identify the AST node(s) required to perform the transformation. For example,
-the `optimizers.constant.ConstantFinder` pushes out `FinderResult` objects
-containing the `ast.Assign` node for any constant values it finds.
-
-Step 3: Write A Transformer
----------------------------
-
-A transformer is an implementation of `optimizers.base.Transformer`. It accepts
-a `FinderResult` as an argument to the call and modifies the AST in any way
-required to apply the optimization. The logic that applies the AST
-transformation is up to you. I found it useful to use the
-`ast.NodeTransformer <https://docs.python.org/2/library/ast.html#ast.NodeTransformer>`_
-class for this purpose.
-
-Easy mistakes to avoid:
-
-Make sure to use the `ast.copy_location` if you are replacing a node. You will
-likely experience some errors with generating the transformed code if you
-don't.
-
-If you decide to the the `ast.NodeTransformer` make sure return the results
-of `self.generic_visit(node)` any time you do *not* alter the node. Forgetting
-this step could case a large portion of the code to disappear.
-
-Step 4: Optimize And Iterate
-----------------------------
-
-The `optimize` function you created in step one is the primary entry point for
-your new optimization. It should run your Finder and pass all the results
-through your Transformer. Once you implement this function you will start to
-see results through the `pycc-transform` command.
-
-Use the command line client on some sample code and iterate until you feel it's
-right.
-
-Step 5: Test And Lint
+Step 6: Test And Lint
 ---------------------
 
-Make sure the code passes PEP8 and PyFlakes. Those are the linters that
-Travis will run. Also be sure to add some test coverage for the Finder and
-Transformer. We're using `py.test`.
+Before you submit your pull request, make sure it passes all the automated
+tests. TravisCI will run them for you, but you can also use the tox setup
+packaged with this project. Make sure your code passes PEP8, pyflakes, and
+tests in all Python environments (2.6 - 3.4).
+
+You should also add to the tests as you develop your optimizer. Use the
+existing tests as a guide if you are unsure where to start. Just make sure
+you've given a best effort to make sure the optimizer works correctly. If you
+spend a significant amount of time trying to overcome and edge case or bug you
+should most certainly make a test that replicates the issue so another
+developer doesn't change your code and cause a regression.
+
+AST Tools
+=========
 
 Developing Third Party Extensions
 =================================
 
-Writing third party extensions that plug into the PyCC commands requires you
-to provide two interfaces on the right entry points.
+PyCC is designed to treat all optimizers, even the core ones, as extensions.
+This makes all the above information applicable to writing your own third
+part extension.
 
-On the `pycc.optimizers` entry point you must expose a callable which accepts
-a `module.Module` object as the first parameter, any number of named parameters
-which correspond with relevant CLI args added by your module, `*args`,
-and`**kwargs`. The name of this entry point must be prefixed with `pycc_`.
+The major differences are the, obviously, you will be working in your own code
+base rather than this project directly. Since that is the case, the
+organization, style, testing framework, and etc. are all up to you. This
+project places no constriction on how you develop your own, independent code.
 
-On the `pycc.cli.args` entry point you must expose a callable which accepts
-an argument parser from `argparse`. Your function must use this parser to
-register an argument as follows:
+The only exception to this is the extension interface. While you do not have to
+use the base classes or tools from PyCC, the extension you expose _must_ match
+the standard interface.
 
-.. code-block:: python
+The basic requirements for the interface are:
 
-    parser.add_argument(
-        '--my_optimizer',
-        help="Makes stuff go faster.",
-        action='store_const',
-        default=None,
-        const="pycc_my_optimizer",
-    )
+    -   Must have a 'name' property with a short, unique name for the extension.
 
-The value of the `const` parameter should match exactly the name give to the
-`pycc.optimizers` entry point.
+    -   Must have a 'description' property with a short description of the
+        extension.
 
-You may also register arguments needed to configure your optimizer. They will
-be passed into your `pycc.optimizers` entry point addition as keyword
-arguments.
+    -   Must have an 'arguments' property which is an iterable.
+
+    -   Each item present in 'arguments' must expose the following properties:
+
+        -   'name'
+
+            Name of the argument as it appears on the command line.
+
+        -   'description'
+
+            Help message that describes what the flag does.
+
+        -   'type'
+
+            Type object (int, str, etc.) that will be used to type cast the
+            value of the flag.
+
+    -   Must expose a function called 'optimize'. This method must:
+
+        -   Accept an `ast.AST` node as the first parameter.
+
+        -   Accept keyword arguments that match the items given in 'arguments'
+            above. Note: dashes are replaced with underscores.
+
+Beyond this, the only thing your project must do is provide an entry point
+under the `pycc.optimizer` group which points to your extension interface.
