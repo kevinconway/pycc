@@ -28,10 +28,7 @@ setup(
             'pycc-compile = pycc.cli.compile:main',
         ],
         'pycc.optimizers': [
-            'pycc_constant_inliner = pycc.optimizers.constant:optimize',
-        ],
-        'pycc.cli.args': [
-            'pycc_core_args = pycc.cli.args:register',
+            'pycc_constant_inliner = pycc.cli.extensions.constants:ConstantInlineExtension',
         ],
     },
 )
