@@ -1,41 +1,15 @@
-"""Interfaces for the Finder and Optimizer."""
+"""Standard interfaces for optimizers."""
 
-from collections import namedtuple
-
-
-FinderResult = namedtuple('FinderResult', ('node', 'module'))
-
-
-class Base(object):
-
-    def __init__(self, module):
-
-        self.module = module
-        self.package = self.module.package
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
 
 
-class Finder(Base):
-    """Detects unoptimized code."""
+class Optimizer(object):
 
-    def __call__(self):
-        """Generate an iterable of FinderResult."""
+    """Transforms and optimizes an AST node in place."""
 
-        raise NotImplementedError()
-
-
-class Transformer(Base):
-    """Transforms and optimizes code."""
-
-    def __call__(self, found):
-        """Run this optimizer on the given FinderResult."""
-
-        raise NotImplementedError()
-
-
-class Check(Base):
-    """Checks for some artifact in the code."""
-
-    def __call__(self):
-        """Return true/false if artifact is detected/undetected."""
-
+    def __call__(self, node):
+        """Modify the given AST node to optimize performance."""
         raise NotImplementedError()

@@ -8,6 +8,8 @@ from __future__ import unicode_literals
 import ast
 import collections
 
+from . import references
+
 
 class NodeVisitor(object):
 
@@ -111,8 +113,24 @@ class NodeTransformer(NodeVisitor):
     by the asttools.references module.
     """
 
+    def __init__(self, *args, **kwargs):
+        """Initialize the visitor."""
+        super(NodeTransformer, self).__init__(*args, **kwargs)
+        self._modified = False
+
+    @property
+    def modified(self):
+        """Determine whether or not the source was altered."""
+        return self._modified
+
     def _replace(self, new, old):
         """Replace a node in the AST with a new one."""
+        # Don't replace nodes that are identical.
+        if new is old:
+
+            return None
+
+        self._modified = True
         parent = old.parent
         if parent is None:
 
@@ -120,14 +138,16 @@ class NodeTransformer(NodeVisitor):
 
         for field, original in ast.iter_fields(parent):
 
-            if isinstance(original, ast.AST):
+            if isinstance(original, ast.AST) and original is old:
 
                 if new is None:
 
                     delattr(parent, field)
                     continue
 
+                new = references.copy_location(new, old)
                 setattr(parent, field, new)
+                return None
 
             if isinstance(original, list) and old in original:
 
@@ -136,7 +156,9 @@ class NodeTransformer(NodeVisitor):
                     original.remove(old)
                     continue
 
+                new = references.copy_location(new, old)
                 original[original.index(old)] = new
+                return None
 
     def visit(self):
         """Visit the nodes."""
