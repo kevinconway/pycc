@@ -32,3 +32,9 @@ try:
     range = xrange
 except NameError:
     pass
+
+# Provide a long type for py3.
+try:
+    long = long
+except NameError:
+    long = int
