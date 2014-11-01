@@ -25,7 +25,7 @@ PY3 = not PY2
 PY31 = PY3 and VERSION.minor == 1
 PY32 = PY3 and VERSION.minor == 2
 PY33 = PY3 and VERSION.minor == 3
-py34 = PY3 and VERSION.minor == 4
+PY34 = PY3 and VERSION.minor == 4
 
 # Provide a nice range function for py2.
 try:

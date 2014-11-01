@@ -170,6 +170,6 @@ def optimize(node):
     modified = True
     while modified is True:
 
-        visitor = ConstantInliner(node)
-        visitor.visit()
-        modified = visitor.modified
+        inliner = ConstantInliner(node)
+        inliner.visit()
+        modified = inliner.modified
