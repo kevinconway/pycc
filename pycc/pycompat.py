@@ -6,7 +6,17 @@ from __future__ import unicode_literals
 
 import sys
 
-VERSION = sys.version_info
+
+class VERSION(object):
+
+    """Stand in for sys.version_info.
+
+    The values from sys only have named parameters starting in PY27. This
+    allows us to use named parameters for all versions of Python.
+    """
+
+    major, minor, micro, releaselevel, serial = sys.version_info
+
 PY2 = VERSION.major == 2
 PY25 = PY2 and VERSION.minor == 5
 PY26 = PY2 and VERSION.minor == 6
